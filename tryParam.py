@@ -6,9 +6,10 @@ pretty.install()
 import os
 import subprocess
 
-host = '132.74.68.175'
-user = 'fibrostudy'
-password = '8X-Zpp!!'
+
+host = os.getenv('HOST')
+user = os.getenv('USER')
+password = os.getenv('PASSWORD')
 
 def upload_directory(sftp, local_path, remote_path):
     """Recursively upload a directory with all its files and subdirectories."""

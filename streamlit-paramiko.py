@@ -6,16 +6,18 @@ pretty.install()
 import os
 import webview
 from flask import Flask
-
+from dotenv import load_dotenv
 import stat
 
 import subprocess
 
 
 
-host = '132.74.68.175'
-user = 'fibrostudy'
-password = '8X-Zpp!!'
+# Load environment variables from .env file
+host = os.getenv('HOST')
+user = os.getenv('USER')
+password = os.getenv('PASSWORD')
+
 
 
 def main():

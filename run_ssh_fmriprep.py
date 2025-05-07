@@ -1,5 +1,6 @@
 import paramiko
 from rich import print
+import os
 
 
 def main(user, host, password):
@@ -38,8 +39,9 @@ def main(user, host, password):
 
 
 if __name__ == "__main__":
-    host = '132.74.68.175'
-    user = 'fibrostudy'
-    password = '8X-Zpp!!'
+    host = os.getenv('HOST')
+    user = os.getenv('USER')
+    password = os.getenv('PASSWORD')
+    
     print(f"User: {user}, Host: {host}")
     main(user, host, password)
