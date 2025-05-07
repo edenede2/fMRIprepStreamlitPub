@@ -66,7 +66,6 @@ if __name__ == '__main__':
     password = sys.argv[3]
     print(f'User: {user}, Host: {host}, Password: {password}')
     main(user, host, password)
-    # main('fibrostudy', '132.74.68.175', '8X-Zpp!!')
     
     
     
