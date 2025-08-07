@@ -15,7 +15,7 @@ def parse_cli():
     # grab flag blocks
     subj_idx = remain.index("--subjects") if "--subjects" in remain else None
     task_idx = remain.index("--tasks")    if "--tasks"    in remain else None
-    anat_only = remain.index("--anat-only") if "--anat-only" in remain else None
+    anat_only = "--anat-only" in remain
 
     if anat_only == 0:
         anat_only = True
@@ -84,7 +84,8 @@ def main(user, host, password, subjects=None, tasks=None, anat_only=False):
             cmd_prep_ids = (
                 f"IDS=$(tr '\n' ' ' < {remote_file}) && "
                 f"cd {remote_dir} && "
-                f"sudo ./fmri-run.sh --participant-label $IDS {"--anat-only" if anat_only else ""} && "
+                f"sudo ./fmri-run.sh --participant-label $IDS {tasks_flag} "
+                f"{'--anat-only' if anat_only else ''} && "
                 f"echo '[fMRIprep finished OK]'"
             )
 
