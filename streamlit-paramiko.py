@@ -304,6 +304,14 @@ def main():
         # stderr.close()
         
         if selected_tasks != None:
+            helper   = r"C:\Users\PsyLab-6028\Desktop\fMRIprepStreamlit\scripts\run_fMRIprep_tasks.py"
+            subject_flags = " ".join(st.session_state.list_of_transfered) 
+            task_flags    = " ".join(selected_tasks) if selected_tasks else ""
+            anat_only = '1' if st.session_state.anat_only else '0'
+
+            command = rf'python "{helper}" {host} {user} {password} ' \
+                rf'--subjects {subject_flags} --tasks {task_flags} --anat-only {anat_only}'
+
             command = rf'python "C:\Users\PsyLab-6028\Desktop\fMRIprepStreamlit\scripts\run_fMRIprep_tasks.py" {host} {user} {password} {" ".join(selected_tasks)}'
         else:
             command = rf'python "C:\Users\PsyLab-6028\Desktop\fMRIprepStreamlit\scripts\run_fMRIprep.py" {host} {user} {password}'
