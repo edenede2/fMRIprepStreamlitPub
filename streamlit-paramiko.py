@@ -12,6 +12,7 @@ import stat
 import subprocess
 
 
+load_dotenv()  
 
 # Load environment variables from .env file
 host = os.getenv('HOST')
@@ -21,6 +22,11 @@ password = os.getenv('PASSWORD')
 
 
 def main():
+    host = os.getenv('HOST')
+    user = os.getenv('USER')
+    password = os.getenv('PASSWORD')
+
+
     if 'selected_subject' not in st.session_state:
         st.session_state.selected_subject = None
         
@@ -152,7 +158,7 @@ def main():
         client.load_system_host_keys()
 
         client.set_missing_host_key_policy(AutoAddPolicy())
-
+        print(f'Connecting to {host} as {user}')
         client.connect(host, username=user, password=password)
 
 
@@ -176,7 +182,7 @@ def main():
 
     st.write('Select a folder to transfer from the local machine to the server')
 
-    folder_path = r'E:\\Fibro\\BIDS_output'
+    folder_path = r'\\PSYLAB-6028-016\e\\Fibro\\BIDS_output'
 
     list_subjects = os.listdir(folder_path)
 
@@ -252,6 +258,29 @@ def main():
         
     st.write('Run fMRIprep on the server')
     
+    st.write('Select the tasks to run fMRIprep on the server')
+
+    tasks_list = []
+
+    for sub in os.listdir(r'\\PSYLAB-6028-016\e\\Fibro\\BIDS_output'):
+        if sub.endswith('.xlsx'):
+            continue
+        for file in os.listdir(os.path.join(r'\\PSYLAB-6028-016\e\\Fibro\\BIDS_output', sub, 'func')):
+            if file.endswith('.nii.gz'):
+                task = file.split('_')[1]
+                if 'task-' in task:
+                    task = task.split('-')[1]
+                    if 'bold' in task.lower():
+                        task = task.split('_')[0]
+                    if task not in tasks_list:
+                        tasks_list.append(task)
+    tasks_list.sort()
+    st.session_state.tasks_list = tasks_list
+    selected_tasks = st.multiselect('Select tasks', tasks_list)
+    
+    if selected_tasks != None:
+        st.session_state.selected_tasks = selected_tasks
+
     if st.button('Run fMRIprep'):
         # client = SSHClient() 
         
@@ -274,7 +303,10 @@ def main():
         # stdout.close()
         # stderr.close()
         
-        command = rf'python "C:\Users\PsyLab-6028\Desktop\fMRIprepStreamlit\scripts\run_fMRIprep.py" {host} {user} {password}'
+        if selected_tasks != None:
+            command = rf'python "C:\Users\PsyLab-6028\Desktop\fMRIprepStreamlit\scripts\run_fMRIprep_tasks.py" {host} {user} {password} {" ".join(selected_tasks)}'
+        else:
+            command = rf'python "C:\Users\PsyLab-6028\Desktop\fMRIprepStreamlit\scripts\run_fMRIprep.py" {host} {user} {password}'
         
         # subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -331,25 +363,25 @@ def main():
         sftp_session.chdir('fMRIprep/outputs/')
         list_files = sftp_session.listdir()
         if selected_output_folder.startswith('sub-'):
-            if not os.path.exists(f'E:/Fibro/fMRIprep_output/{selected_output_folder}'):
-                os.makedirs(f'E:/Fibro/fMRIprep_output/{selected_output_folder}')
-                os.makedirs(f'E:/Fibro/fMRIprep_output/{selected_output_folder}/figures')
-                os.makedirs(f'E:/Fibro/fMRIprep_output/{selected_output_folder}/func')
-                os.makedirs(f'E:/Fibro/fMRIprep_output/{selected_output_folder}/log')
+            if not os.path.exists(f'PSYLAB-6028-016/e/Fibro/fMRIprep_output/{selected_output_folder}'):
+                os.makedirs(f'PSYLAB-6028-016/e/Fibro/fMRIprep_output/{selected_output_folder}')
+                os.makedirs(f'PSYLAB-6028-016/e/Fibro/fMRIprep_output/{selected_output_folder}/figures')
+                os.makedirs(f'PSYLAB-6028-016/e/Fibro/fMRIprep_output/{selected_output_folder}/func')
+                os.makedirs(f'PSYLAB-6028-016/e/Fibro/fMRIprep_output/{selected_output_folder}/log')
                 
-            download_directory(sftp_session, f'{selected_output_folder}/figures', f'E:/Fibro/fMRIprep_output/{selected_output_folder}/figures')
-            download_directory(sftp_session, f'{selected_output_folder}/func', f'E:/Fibro/fMRIprep_output/{selected_output_folder}/func')
-            download_directory(sftp_session, f'{selected_output_folder}/log', f'E:/Fibro/fMRIprep_output/{selected_output_folder}/log')
-            # sftp_session.get(f'fMRIprep/outputs/{selected_output_folder}/figures', f'E:/Fibro/fMRIprep_output/{selected_output_folder}/figures')
-            # sftp_session.get(f'fMRIprep/outputs/{selected_output_folder}/func', f'E:/Fibro/fMRIprep_output/{selected_output_folder}/func')
-            sftp_session.get(f'{selected_output_folder}.html', f'E:/Fibro/fMRIprep_output/{selected_output_folder}.html')
+            download_directory(sftp_session, f'{selected_output_folder}/figures', f'PSYLAB-6028-016/e/Fibro/fMRIprep_output/{selected_output_folder}/figures')
+            download_directory(sftp_session, f'{selected_output_folder}/func', f'PSYLAB-6028-016/e/Fibro/fMRIprep_output/{selected_output_folder}/func')
+            download_directory(sftp_session, f'{selected_output_folder}/log', f'PSYLAB-6028-016/e/Fibro/fMRIprep_output/{selected_output_folder}/log')
+            # sftp_session.get(f'fMRIprep/outputs/{selected_output_folder}/figures', f'PSYLAB-6028-016/e/Fibro/fMRIprep_output/{selected_output_folder}/figures')
+            # sftp_session.get(f'fMRIprep/outputs/{selected_output_folder}/func', f'PSYLAB-6028-016/e/Fibro/fMRIprep_output/{selected_output_folder}/func')
+            sftp_session.get(f'{selected_output_folder}.html', f'PSYLAB-6028-016/e/Fibro/fMRIprep_output/{selected_output_folder}.html')
         elif selected_output_folder.endswith('.json'):
-            sftp_session.get(selected_output_folder, f'E:/Fibro/fMRIprep_output/{selected_output_folder}')
+            sftp_session.get(selected_output_folder, f'PSYLAB-6028-016/e/Fibro/fMRIprep_output/{selected_output_folder}')
 
         else:
-            if not os.path.exists(f'E:/Fibro/fMRIprep_output/{selected_output_folder}'):
-                os.makedirs(f'E:/Fibro/fMRIprep_output/{selected_output_folder}')
-            download_directory(sftp_session, selected_output_folder, f'E:/Fibro/fMRIprep_output/{selected_output_folder}')
+            if not os.path.exists(f'PSYLAB-6028-016/e/Fibro/fMRIprep_output/{selected_output_folder}'):
+                os.makedirs(f'PSYLAB-6028-016/e/Fibro/fMRIprep_output/{selected_output_folder}')
+            download_directory(sftp_session, selected_output_folder, f'PSYLAB-6028-016/e/Fibro/fMRIprep_output/{selected_output_folder}')
 
         client.close()
         sftp_session.close()

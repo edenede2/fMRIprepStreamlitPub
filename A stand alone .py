@@ -72,10 +72,10 @@ def main():
                                'phasediff1': [phasediff1], 'phasediff2': [phasediff2], 
                                'magnitude1_a': [magnitude1_a], 'magnitude2_a': [magnitude2_a], 
                                'phasediff1_a': [phasediff1_a], 'phasediff2_a': [phasediff2_a]})
-    raw_data = pd.read_excel('E:\Fibro\Raw_Data_04_11_24.xlsx')
+    raw_data = pd.read_excel(r'\\PSYLAB-6028-016\e\Fibro\Raw_Data_Fibro.xlsx')
     
     # Get the path of the folder that include the subjects folders.
-    folder_path = r'E:\Fibro'
+    folder_path = r'\\PSYLAB-6028-016\e\Fibro'
     
     subjects_folders_dict = {}
     
@@ -93,24 +93,31 @@ def main():
         
     for sub, dir in subjects_folders_dict.items():
 
-
-        if re.search(r'sub-\d{3}', sub):
-            old_sub = sub.replace('sub-', 'sub_')
-            type = raw_data.loc[raw_data['Subject'] == old_sub, 'type'].values[0]
-        else:
-            type = raw_data.loc[raw_data['Subject'] == sub, 'type'].values[0]
+        try:
+            if re.search(r'sub-\d{3}', sub):
+                old_sub = sub.replace('sub-', 'sub_')
+                type = raw_data.loc[raw_data['Subject'] == old_sub, 'type'].values[0]
+            else:
+                type = raw_data.loc[raw_data['Subject'] == sub, 'type'].values[0]
+        except IndexError:    
+            print(f"Subject {sub} not found in raw_data, skipping...")
+            continue
         
         if type == 'HC':
             new_sub = sub.replace('sub_', 'sub-')
             df.loc[new_sub, 'type'] = 'HC'
             HC += 1
-        
+            
                 
         elif type == 'FM':
             new_sub = sub.replace('sub_', 'sub-')
             df.loc[new_sub, 'type'] = 'FM'
             FM += 1
-                    
+
+        if raw_data.loc[raw_data['Subject'] == sub, 'successful?'].values[0] != 1:
+            print(f"Subject {sub} is not successful, skipping...")
+            continue
+
         Subjects += 1
         subjects_folders_dict[sub] = {'files':{'nii.gz': [], 'json': []}, 'dir': dir}
         for file in os.listdir(os.path.join(folder_path, dir)):
@@ -407,267 +414,270 @@ def main():
                 df.loc[sub, 'Id'] = sub
                 
 
-                
-                if scan == 'T1w':
-                    T1w += 1
-                    if scan_ext == 'MPR':
-                        new_name = f"{sub}-MPR_T1w{ext}"
-                        shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
-                        os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
-                        
-                        if ext == '.json':
-                            if pd.isna(df.loc[sub, 'T1w json']):
-                                df.loc[sub, 'T1w json'] = 1
-                            else:
-                                df.loc[sub, 'T1w json'] += 1
-                        elif ext == '.nii.gz':
-                            if pd.isna(df.loc[sub, 'T1w nifti']):
-                                df.loc[sub, 'T1w nifti'] = 1
-                            else:
-                                df.loc[sub, 'T1w nifti'] += 1
-                    else:
-                        new_name = f"{sub}_T1w{ext}"
-                        shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
-                        os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
-                        if ext == '.json':
-                            if pd.isna(df.loc[sub, 'T1w json']):
-                                df.loc[sub, 'T1w json'] = 1
-                            else:
-                                df.loc[sub, 'T1w json'] += 1
-                        elif ext == '.nii.gz':
-                            if pd.isna(df.loc[sub, 'T1w nifti']):
-                                df.loc[sub, 'T1w nifti'] = 1
-                            else:
-                                df.loc[sub, 'T1w nifti'] += 1
-                                
-                elif scan == 'T2w':
-                    T2w += 1
-                    new_name = f"{sub}_T2w{ext}"
-                    shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
-                    os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
-                    if ext == '.json':
-                        if pd.isna(df.loc[sub, 'T2w json']):
-                            df.loc[sub, 'T2w json'] = 1
-                        else:
-                            df.loc[sub, 'T2w json'] += 1
-                    elif ext == '.nii.gz':
-                        if pd.isna(df.loc[sub, 'T2w nifti']):
-                            df.loc[sub, 'T2w nifti'] = 1
-                        else:
-                            df.loc[sub, 'T2w nifti'] += 1
-                elif scan == 'T2wa':
-                    T2wa += 1
-                    new_name = f"{sub}_T2wa{ext}"
-                    shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
-                    os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
-                    if ext == '.json':
-                        if pd.isna(df.loc[sub, 'T2wa json']):
-                            df.loc[sub, 'T2wa json'] = 1
-                        else:
-                            df.loc[sub, 'T2wa json'] += 1
-                    elif ext == '.nii.gz':
-                        if pd.isna(df.loc[sub, 'T2wa nifti']):
-                            df.loc[sub, 'T2wa nifti'] = 1
-                        else:
-                            df.loc[sub, 'T2wa nifti'] += 1
-                elif scan == 'BOLD':
-                    if scan_ext == 'Task':
-                        if task == 'Rest':
-                            Rest += 1
-                        elif task == 'Flares':
-                            Flares += 1
-                        elif task == 'Reward':
-                            Reward += 1
-                        
-                        if sbref == 'SBRef':
-                            new_name = f"{sub}_task-{task}_sbref{ext}"
+                try:
+                    if scan == 'T1w':
+                        T1w += 1
+                        if scan_ext == 'MPR':
+                            new_name = f"{sub}-MPR_T1w{ext}"
                             shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
                             os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
-                            if ext == '.json':
-                                if pd.isna(df.loc[sub, f'{task} SBRef json']):
-                                    df.loc[sub, f'{task} SBRef json'] = 1
-                                else:
-                                    df.loc[sub, f'{task} SBRef json'] += 1
-                            elif ext == '.nii.gz':
-                                if pd.isna(df.loc[sub, f'{task} SBRef nifti']):
-                                    df.loc[sub, f'{task} SBRef nifti'] = 1
-                                else:
-                                    df.loc[sub, f'{task} SBRef nifti'] += 1
-                        else:
                             
-                            new_name = f"{sub}_task-{task}_bold{ext}"
-                            shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
-                            os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
                             if ext == '.json':
-                                if pd.isna(df.loc[sub, f'{task} json']):
-                                    df.loc[sub, f'{task} json'] = 1
+                                if pd.isna(df.loc[sub, 'T1w json']):
+                                    df.loc[sub, 'T1w json'] = 1
                                 else:
-                                    df.loc[sub, f'{task} json'] += 1
+                                    df.loc[sub, 'T1w json'] += 1
                             elif ext == '.nii.gz':
-                                if pd.isna(df.loc[sub, f'{task} nifti']):
-                                    df.loc[sub, f'{task} nifti'] = 1
+                                if pd.isna(df.loc[sub, 'T1w nifti']):
+                                    df.loc[sub, 'T1w nifti'] = 1
                                 else:
-                                    df.loc[sub, f'{task} nifti'] += 1
-                    elif scan_ext == 'Callibration':
-                        Callibration += 1
-                        if sbref == 'SBRef':
-                            new_name = f"{sub}_callibration_sbref{ext}"
-                            shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
-                            os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
-                            if ext == '.json':
-                                if pd.isna(df.loc[sub, 'Callibration SBRef json']):
-                                    df.loc[sub, 'Callibration SBRef json'] = 1
-                                else:
-                                    df.loc[sub, 'Callibration SBRef json'] += 1
-                            elif ext == '.nii.gz':
-                                if pd.isna(df.loc[sub, 'Callibration SBRef nifti']):
-                                    df.loc[sub, 'Callibration SBRef nifti'] = 1
-                                else:
-                                    df.loc[sub, 'Callibration SBRef nifti'] += 1
+                                    df.loc[sub, 'T1w nifti'] += 1
                         else:
-                            new_name = f"{sub}_callibration{ext}"
+                            new_name = f"{sub}_T1w{ext}"
                             shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
                             os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
                             if ext == '.json':
-                                if pd.isna(df.loc[sub, 'Callibration json']):
-                                    df.loc[sub, 'Callibration json'] = 1
+                                if pd.isna(df.loc[sub, 'T1w json']):
+                                    df.loc[sub, 'T1w json'] = 1
                                 else:
-                                    df.loc[sub, 'Callibration json'] += 1
+                                    df.loc[sub, 'T1w json'] += 1
                             elif ext == '.nii.gz':
-                                if pd.isna(df.loc[sub, 'Callibration nifti']):
-                                    df.loc[sub, 'Callibration nifti'] = 1
+                                if pd.isna(df.loc[sub, 'T1w nifti']):
+                                    df.loc[sub, 'T1w nifti'] = 1
                                 else:
-                                    df.loc[sub, 'Callibration nifti'] += 1
-                    elif scan_ext == 'Callibration_a':
-                        Callibration += 1
-                        if sbref == 'SBRef':
-                            new_name = f"{sub}_callibration_a_sbref{ext}"
-                            shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
-                            os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
-                            if ext == '.json':
-                                if pd.isna(df.loc[sub, 'Callibration_a SBRef json']):
-                                    df.loc[sub, 'Callibration_a SBRef json'] = 1
-                                else:
-                                    df.loc[sub, 'Callibration_a SBRef json'] += 1
-                            elif ext == '.nii.gz':
-                                if pd.isna(df.loc[sub, 'Callibration_a SBRef nifti']):
-                                    df.loc[sub, 'Callibration_a SBRef nifti'] = 1
-                                else:
-                                    df.loc[sub, 'Callibration_a SBRef nifti'] += 1
-                        else:
-                            new_name = f"{sub}_callibration_a{ext}"
-                            shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
-                            os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
-                            if ext == '.json':
-                                if pd.isna(df.loc[sub, 'Callibration_a json']):
-                                    df.loc[sub, 'Callibration_a json'] = 1
-                                else:
-                                    df.loc[sub, 'Callibration_a json'] += 1
-                            elif ext == '.nii.gz':
-                                if pd.isna(df.loc[sub, 'Callibration_a nifti']):
-                                    df.loc[sub, 'Callibration_a nifti'] = 1
-                                else:
-                                    df.loc[sub, 'Callibration_a nifti'] += 1
-                    elif scan_ext == 'Localizer':
-                        Localizer += 1
-                        if sbref == 'SBRef':
-                            new_name = f"{sub}_localizer_sbref{ext}"
-                            shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
-                            os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
-                            if ext == '.json':
-                                if pd.isna(df.loc[sub, 'Localizer SBRef json']):
-                                    df.loc[sub, 'Localizer SBRef json'] = 1
-                                else:
-                                    df.loc[sub, 'Localizer SBRef json'] += 1
-                            elif ext == '.nii.gz':
-                                if pd.isna(df.loc[sub, 'Localizer SBRef nifti']):
-                                    df.loc[sub, 'Localizer SBRef nifti'] = 1
-                                else:
-                                    df.loc[sub, 'Localizer SBRef nifti'] += 1
+                                    df.loc[sub, 'T1w nifti'] += 1
                                     
+                    elif scan == 'T2w':
+                        T2w += 1
+                        new_name = f"{sub}_T2w{ext}"
+                        shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
+                        os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
+                        if ext == '.json':
+                            if pd.isna(df.loc[sub, 'T2w json']):
+                                df.loc[sub, 'T2w json'] = 1
+                            else:
+                                df.loc[sub, 'T2w json'] += 1
+                        elif ext == '.nii.gz':
+                            if pd.isna(df.loc[sub, 'T2w nifti']):
+                                df.loc[sub, 'T2w nifti'] = 1
+                            else:
+                                df.loc[sub, 'T2w nifti'] += 1
+                    elif scan == 'T2wa':
+                        T2wa += 1
+                        new_name = f"{sub}_T2wa{ext}"
+                        shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
+                        os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
+                        if ext == '.json':
+                            if pd.isna(df.loc[sub, 'T2wa json']):
+                                df.loc[sub, 'T2wa json'] = 1
+                            else:
+                                df.loc[sub, 'T2wa json'] += 1
+                        elif ext == '.nii.gz':
+                            if pd.isna(df.loc[sub, 'T2wa nifti']):
+                                df.loc[sub, 'T2wa nifti'] = 1
+                            else:
+                                df.loc[sub, 'T2wa nifti'] += 1
+                    elif scan == 'BOLD':
+                        if scan_ext == 'Task':
+                            if task == 'Rest':
+                                Rest += 1
+                            elif task == 'Flares':
+                                Flares += 1
+                            elif task == 'Reward':
+                                Reward += 1
+                            
+                            if sbref == 'SBRef':
+                                new_name = f"{sub}_task-{task}_sbref{ext}"
+                                shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
+                                os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
+                                if ext == '.json':
+                                    if pd.isna(df.loc[sub, f'{task} SBRef json']):
+                                        df.loc[sub, f'{task} SBRef json'] = 1
+                                    else:
+                                        df.loc[sub, f'{task} SBRef json'] += 1
+                                elif ext == '.nii.gz':
+                                    if pd.isna(df.loc[sub, f'{task} SBRef nifti']):
+                                        df.loc[sub, f'{task} SBRef nifti'] = 1
+                                    else:
+                                        df.loc[sub, f'{task} SBRef nifti'] += 1
+                            else:
+                                
+                                new_name = f"{sub}_task-{task}_bold{ext}"
+                                shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
+                                os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
+                                if ext == '.json':
+                                    if pd.isna(df.loc[sub, f'{task} json']):
+                                        df.loc[sub, f'{task} json'] = 1
+                                    else:
+                                        df.loc[sub, f'{task} json'] += 1
+                                elif ext == '.nii.gz':
+                                    if pd.isna(df.loc[sub, f'{task} nifti']):
+                                        df.loc[sub, f'{task} nifti'] = 1
+                                    else:
+                                        df.loc[sub, f'{task} nifti'] += 1
+                        elif scan_ext == 'Callibration':
+                            Callibration += 1
+                            if sbref == 'SBRef':
+                                new_name = f"{sub}_callibration_sbref{ext}"
+                                shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
+                                os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
+                                if ext == '.json':
+                                    if pd.isna(df.loc[sub, 'Callibration SBRef json']):
+                                        df.loc[sub, 'Callibration SBRef json'] = 1
+                                    else:
+                                        df.loc[sub, 'Callibration SBRef json'] += 1
+                                elif ext == '.nii.gz':
+                                    if pd.isna(df.loc[sub, 'Callibration SBRef nifti']):
+                                        df.loc[sub, 'Callibration SBRef nifti'] = 1
+                                    else:
+                                        df.loc[sub, 'Callibration SBRef nifti'] += 1
+                            else:
+                                new_name = f"{sub}_callibration{ext}"
+                                shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
+                                os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
+                                if ext == '.json':
+                                    if pd.isna(df.loc[sub, 'Callibration json']):
+                                        df.loc[sub, 'Callibration json'] = 1
+                                    else:
+                                        df.loc[sub, 'Callibration json'] += 1
+                                elif ext == '.nii.gz':
+                                    if pd.isna(df.loc[sub, 'Callibration nifti']):
+                                        df.loc[sub, 'Callibration nifti'] = 1
+                                    else:
+                                        df.loc[sub, 'Callibration nifti'] += 1
+                        elif scan_ext == 'Callibration_a':
+                            Callibration += 1
+                            if sbref == 'SBRef':
+                                new_name = f"{sub}_callibration_a_sbref{ext}"
+                                shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
+                                os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
+                                if ext == '.json':
+                                    if pd.isna(df.loc[sub, 'Callibration_a SBRef json']):
+                                        df.loc[sub, 'Callibration_a SBRef json'] = 1
+                                    else:
+                                        df.loc[sub, 'Callibration_a SBRef json'] += 1
+                                elif ext == '.nii.gz':
+                                    if pd.isna(df.loc[sub, 'Callibration_a SBRef nifti']):
+                                        df.loc[sub, 'Callibration_a SBRef nifti'] = 1
+                                    else:
+                                        df.loc[sub, 'Callibration_a SBRef nifti'] += 1
+                            else:
+                                new_name = f"{sub}_callibration_a{ext}"
+                                shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
+                                os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
+                                if ext == '.json':
+                                    if pd.isna(df.loc[sub, 'Callibration_a json']):
+                                        df.loc[sub, 'Callibration_a json'] = 1
+                                    else:
+                                        df.loc[sub, 'Callibration_a json'] += 1
+                                elif ext == '.nii.gz':
+                                    if pd.isna(df.loc[sub, 'Callibration_a nifti']):
+                                        df.loc[sub, 'Callibration_a nifti'] = 1
+                                    else:
+                                        df.loc[sub, 'Callibration_a nifti'] += 1
+                        elif scan_ext == 'Localizer':
+                            Localizer += 1
+                            if sbref == 'SBRef':
+                                new_name = f"{sub}_localizer_sbref{ext}"
+                                shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
+                                os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
+                                if ext == '.json':
+                                    if pd.isna(df.loc[sub, 'Localizer SBRef json']):
+                                        df.loc[sub, 'Localizer SBRef json'] = 1
+                                    else:
+                                        df.loc[sub, 'Localizer SBRef json'] += 1
+                                elif ext == '.nii.gz':
+                                    if pd.isna(df.loc[sub, 'Localizer SBRef nifti']):
+                                        df.loc[sub, 'Localizer SBRef nifti'] = 1
+                                    else:
+                                        df.loc[sub, 'Localizer SBRef nifti'] += 1
+                                        
+                            else:
+                                new_name = f"{sub}_localizer{ext}"
+                                shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
+                                os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
+                                if ext == '.json':
+                                    if pd.isna(df.loc[sub, 'Localizer json']):
+                                        df.loc[sub, 'Localizer json'] = 1
+                                    else:
+                                        df.loc[sub, 'Localizer json'] += 1
+                                elif ext == '.nii.gz':
+                                    if pd.isna(df.loc[sub, 'Localizer nifti']):
+                                        df.loc[sub, 'Localizer nifti'] = 1
+                                    else:
+                                        df.loc[sub, 'Localizer nifti'] += 1
+                                        
+                        elif scan_ext == 'Localizer_a':
+                            Localizer += 1
+                            if sbref == 'SBRef':
+                                new_name = f"{sub}_localizer_a_sbref{ext}"
+                                shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
+                                os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
+                                if ext == '.json':
+                                    if pd.isna(df.loc[sub, 'Localizer_a SBRef json']):
+                                        df.loc[sub, 'Localizer_a SBRef json'] = 1
+                                    else:
+                                        df.loc[sub, 'Localizer_a SBRef json'] += 1
+                                elif ext == '.nii.gz':
+                                    if pd.isna(df.loc[sub, 'Localizer_a SBRef nifti']):
+                                        df.loc[sub, 'Localizer_a SBRef nifti'] = 1
+                                    else:
+                                        df.loc[sub, 'Localizer_a SBRef nifti'] += 1
+                            else:
+                                new_name = f"{sub}_localizer_a{ext}"
+                                shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
+                                os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
+                                if ext == '.json':
+                                    if pd.isna(df.loc[sub, 'Localizer_a json']):
+                                        df.loc[sub, 'Localizer_a json'] = 1
+                                    else:
+                                        df.loc[sub, 'Localizer_a json'] += 1
+                                elif ext == '.nii.gz':
+                                    if pd.isna(df.loc[sub, 'Localizer_a nifti']):
+                                        df.loc[sub, 'Localizer_a nifti'] = 1
+                                    else:
+                                        df.loc[sub, 'Localizer_a nifti'] += 1
                         else:
-                            new_name = f"{sub}_localizer{ext}"
-                            shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
-                            os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
-                            if ext == '.json':
-                                if pd.isna(df.loc[sub, 'Localizer json']):
-                                    df.loc[sub, 'Localizer json'] = 1
-                                else:
-                                    df.loc[sub, 'Localizer json'] += 1
-                            elif ext == '.nii.gz':
-                                if pd.isna(df.loc[sub, 'Localizer nifti']):
-                                    df.loc[sub, 'Localizer nifti'] = 1
-                                else:
-                                    df.loc[sub, 'Localizer nifti'] += 1
-                                    
-                    elif scan_ext == 'Localizer_a':
-                        Localizer += 1
-                        if sbref == 'SBRef':
-                            new_name = f"{sub}_localizer_a_sbref{ext}"
-                            shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
-                            os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
-                            if ext == '.json':
-                                if pd.isna(df.loc[sub, 'Localizer_a SBRef json']):
-                                    df.loc[sub, 'Localizer_a SBRef json'] = 1
-                                else:
-                                    df.loc[sub, 'Localizer_a SBRef json'] += 1
-                            elif ext == '.nii.gz':
-                                if pd.isna(df.loc[sub, 'Localizer_a SBRef nifti']):
-                                    df.loc[sub, 'Localizer_a SBRef nifti'] = 1
-                                else:
-                                    df.loc[sub, 'Localizer_a SBRef nifti'] += 1
-                        else:
-                            new_name = f"{sub}_localizer_a{ext}"
-                            shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
-                            os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
-                            if ext == '.json':
-                                if pd.isna(df.loc[sub, 'Localizer_a json']):
-                                    df.loc[sub, 'Localizer_a json'] = 1
-                                else:
-                                    df.loc[sub, 'Localizer_a json'] += 1
-                            elif ext == '.nii.gz':
-                                if pd.isna(df.loc[sub, 'Localizer_a nifti']):
-                                    df.loc[sub, 'Localizer_a nifti'] = 1
-                                else:
-                                    df.loc[sub, 'Localizer_a nifti'] += 1
+                            print(f"File {name} is BOLD but the scan type is not found")
+                    elif scan == 'fMAP':
+                        if scan_ext == 'magnitude1':
+                            magnitude1 += 1
+                        elif scan_ext == 'magnitude2':
+                            magnitude2 += 1
+                        elif scan_ext == 'phasediff1':
+                            phasediff1 += 1
+                        elif scan_ext == 'phasediff2':
+                            phasediff2 += 1
+                        elif scan_ext == 'magnitude1_a':
+                            magnitude1_a += 1
+                        elif scan_ext == 'magnitude2_a':
+                            magnitude2_a += 1
+                        elif scan_ext == 'phasediff1_a':
+                            phasediff1_a += 1
+                        elif scan_ext == 'phasediff2_a':
+                            phasediff2_a += 1
+                            
+                        new_name = f"{sub}_{scan_ext}{ext}"
+                        shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
+                        os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
+                        if ext == '.json':
+                            if pd.isna(df.loc[sub, f'{scan_ext} json']):
+                                df.loc[sub, f'{scan_ext} json'] = 1
+                            else:
+                                df.loc[sub, f'{scan_ext} json'] += 1
+                        elif ext == '.nii.gz':
+                            if pd.isna(df.loc[sub, f'{scan_ext} nifti']):
+                                df.loc[sub, f'{scan_ext} nifti'] = 1
+                            else:
+                                df.loc[sub, f'{scan_ext} nifti'] += 1
                     else:
-                        print(f"File {name} is BOLD but the scan type is not found")
-                elif scan == 'fMAP':
-                    if scan_ext == 'magnitude1':
-                        magnitude1 += 1
-                    elif scan_ext == 'magnitude2':
-                        magnitude2 += 1
-                    elif scan_ext == 'phasediff1':
-                        phasediff1 += 1
-                    elif scan_ext == 'phasediff2':
-                        phasediff2 += 1
-                    elif scan_ext == 'magnitude1_a':
-                        magnitude1_a += 1
-                    elif scan_ext == 'magnitude2_a':
-                        magnitude2_a += 1
-                    elif scan_ext == 'phasediff1_a':
-                        phasediff1_a += 1
-                    elif scan_ext == 'phasediff2_a':
-                        phasediff2_a += 1
-                        
-                    new_name = f"{sub}_{scan_ext}{ext}"
-                    shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
-                    os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
-                    if ext == '.json':
-                        if pd.isna(df.loc[sub, f'{scan_ext} json']):
-                            df.loc[sub, f'{scan_ext} json'] = 1
-                        else:
-                            df.loc[sub, f'{scan_ext} json'] += 1
-                    elif ext == '.nii.gz':
-                        if pd.isna(df.loc[sub, f'{scan_ext} nifti']):
-                            df.loc[sub, f'{scan_ext} nifti'] = 1
-                        else:
-                            df.loc[sub, f'{scan_ext} nifti'] += 1
-                else:
-                    new_name = f"{sub}_misc-{name}{ext}"
-                    print(f"File {name} is not T1w, Task, Calibration, Localizer, T2w, or fMAP so it will be saved in the misc folder")
-                    shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
-                    os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
+                        new_name = f"{sub}_misc-{name}{ext}"
+                        print(f"File {name} is not T1w, Task, Calibration, Localizer, T2w, or fMAP so it will be saved in the misc folder")
+                        shutil.copy(os.path.join(folder_path, dir, name), final_output_path)
+                        os.rename(os.path.join(final_output_path, name), os.path.join(final_output_path, new_name))
+                except FileExistsError:
+                    print(f"File {name} already exists in the output folder, skipping...")
+                    continue
     for i in os.listdir(output_folder):
         if re.search(r'sub-', i):
             df_folders.loc[i, 'Id'] = i
