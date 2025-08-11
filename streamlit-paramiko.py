@@ -8,6 +8,7 @@ import webview
 from flask import Flask
 from dotenv import load_dotenv
 import stat
+from datetime import datetime
 
 import subprocess
 
@@ -298,8 +299,10 @@ def main():
         st.session_state.list_of_transfered = []
 
     if 'subjects_to_run' not in st.session_state:
-        st.write('Subjects to run fMRIprep on the server')
-        st.session_state.subjects_to_run = st.multiselect('Select subjects', st.session_state.list_of_transfered if st.session_state.list_of_transfered else [])
+        st.session_state.subjects_to_run = []
+    
+    st.write('Subjects to run fMRIprep on the server')
+    st.session_state.subjects_to_run = st.multiselect('Select subjects', st.session_state.list_of_transfered if st.session_state.list_of_transfered else [])
 
     if st.button('Run fMRIprep'):
         # client = SSHClient() 
@@ -351,6 +354,23 @@ def main():
     if 'list_files_outputs_names' not in st.session_state:
         st.session_state.list_files_outputs_names = []
         
+    # if st.button('Check output folder'):
+    #     try:
+    #         client = SSHClient()
+    #         known_hosts_path = os.path.expanduser('~/.ssh/known_hosts')
+    #         client.load_host_keys(known_hosts_path)
+    #         client.load_system_host_keys()
+    #         client.set_missing_host_key_policy(AutoAddPolicy())
+    #         client.connect(host, username=user, password=password)
+    #         sftp_session = client.open_sftp()
+    #         sftp_session.chdir('fMRIprep/outputs/')
+    #         st.session_state.list_files_outputs = [' '.join(str(file).split(' ')[-4:]) for file in sftp_session.listdir_attr()]
+    #         st.session_state.list_files_outputs_names = [file for file in sftp_session.listdir()]
+    #         print(f'List of files: {st.session_state.list_files_outputs}')
+    #         client.close()
+    #         sftp_session.close()
+    #     except Exception as e:
+    #         print(f'Error: {e}')
     if st.button('Check output folder'):
         try:
             client = SSHClient()
@@ -361,20 +381,23 @@ def main():
             client.connect(host, username=user, password=password)
             sftp_session = client.open_sftp()
             sftp_session.chdir('fMRIprep/outputs/')
-            st.session_state.list_files_outputs = [' '.join(str(file).split(' ')[-4:]) for file in sftp_session.listdir_attr()]
-            st.session_state.list_files_outputs_names = [file for file in sftp_session.listdir()]
+            attrs = sorted(sftp_session.listdir_attr(), key=lambda a: a.st_mtime, reverse=True)
+            st.session_state.list_files_outputs = [
+                f"{attr.filename} | size: {attr.st_size} | modified datetime: {datetime.fromtimestamp(attr.st_mtime).strftime('%Y-%m-%d %H:%M:%S')}"
+                for attr in attrs
+            ]
+            st.session_state.list_files_outputs_names = [attr.filename for attr in attrs]
             print(f'List of files: {st.session_state.list_files_outputs}')
             client.close()
             sftp_session.close()
         except Exception as e:
             print(f'Error: {e}')
             
-            
     st.divider()
 
     st.write('To download the output folder, select the desired folder')
 
-    selected_output_folder = (st.selectbox('Select a folder', [x.split(' ')[-1] for x in st.session_state.list_files_outputs]))
+    selected_output_folder = (st.selectbox('Select a folder', st.session_state.list_files_outputs))
 
     if selected_output_folder != None:
         st.session_state.selected_output_folder = selected_output_folder
