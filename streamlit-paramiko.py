@@ -182,7 +182,7 @@ def main():
 
     st.write('Select a folder to transfer from the local machine to the server')
 
-    folder_path = r'\\PSYLAB-6028-016\e\\Fibro\\BIDS_output'
+    folder_path = r'E:\Fibro\BIDS_output'
 
     list_subjects = os.listdir(folder_path)
 
@@ -262,10 +262,10 @@ def main():
 
     tasks_list = []
 
-    for sub in os.listdir(r'\\E:\Fibro\\BIDS_output'):
+    for sub in os.listdir(r'E:\Fibro\\BIDS_output'):
         if sub.endswith('.xlsx'):
             continue
-        for file in os.listdir(os.path.join(r'\\E\\Fibro\\BIDS_output', sub, 'func')):
+        for file in os.listdir(os.path.join(r'E:\\Fibro\\BIDS_output', sub, 'func')):
             if file.endswith('.nii.gz'):
                 task = file.split('_')[1]
                 if 'task-' in task:
@@ -374,7 +374,7 @@ def main():
 
     st.write('To download the output folder, select the desired folder')
 
-    selected_output_folder = (st.selectbox('Select a folder', st.session_state.list_files_outputs.split(' ')[-1]))
+    selected_output_folder = (st.selectbox('Select a folder', [x.split(' ')[-1] for x in st.session_state.list_files_outputs]))
 
     if selected_output_folder != None:
         st.session_state.selected_output_folder = selected_output_folder
