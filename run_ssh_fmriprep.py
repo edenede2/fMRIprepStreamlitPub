@@ -3,29 +3,21 @@ from rich import print
 import os
 from pathlib import Path
 import sys
+import argparse
 
 
 
 def parse_cli():
-    # very small parser – no external deps
-    args = sys.argv[1:]
-    host, user, pw = args[:3]
-    remain        = args[3:]
+    p = argparse.ArgumentParser()
+    p.add_argument("host")
+    p.add_argument("user")
+    p.add_argument("password")
+    p.add_argument("--subjects", nargs="*", default=[])
+    p.add_argument("--tasks",    nargs="*", default=[])
+    p.add_argument("--anat-only", action="store_true")
+    a = p.parse_args()
+    return a.host, a.user, a.password, a.subjects, a.tasks, a.anat_only
 
-    # grab flag blocks
-    subj_idx = remain.index("--subjects") if "--subjects" in remain else None
-    task_idx = remain.index("--tasks")    if "--tasks"    in remain else None
-    anat_only = "--anat-only" in remain
-
-    if anat_only == 0:
-        anat_only = True
-    else:
-        anat_only = False
-
-    subjects = remain[subj_idx+1 : task_idx or len(remain)] if subj_idx is not None else []
-    tasks    = remain[task_idx+1 :]                           if task_idx is not None else []
-
-    return host, user, pw, subjects, tasks, anat_only
 
 
 def main(user, host, password, subjects=None, tasks=None, anat_only=False):
@@ -41,22 +33,33 @@ def main(user, host, password, subjects=None, tasks=None, anat_only=False):
         client.connect(host, username=user, password=password)
 
         remote_dir = "fMRIprep"
-        tasks_flag = " ".join(f"--task-id {t}" for t in tasks)
+        tasks_flag = " ".join(f"-t {t}" for t in (tasks or []))
 
         if not subjects:
 
             cmd = (
                 f"cd {remote_dir} && "
-                f"sudo ./fmri-run.sh {tasks_flag} {'--anat-only' if anat_only else ''} && "
+                f"sudo fmriprep-docker /home/fibrostudy/fMRIprep/selectedSubs "
+                f"/media/psylab-6028/DATA/fMRIprep_outputs participant "
+                f"{tasks_flag} {'--anat-only' if anat_only else ''} "
+                f"--fs-license-file /home/fibrostudy/fMRIprep/license.txt "
+                f"-w /media/Data/work/ --low-mem --nthreads 8 "
+                f"--ignore slicetiming --skip_bids_validation && "
                 f"echo '[fMRIprep finished OK]'"
             )
 
-            print(f"[cyan]Executing command: {cmd}[/cyan]")
-            stdin, stdout, stderr = client.exec_command(cmd, get_pty=True)
 
+            # Provide password for sudo
+            stdin.write(password + "\n")
+            stdin.flush()
+
+            # Collect output
+            print("[green]Output:[/green]")
             print(stdout.read().decode())
+            
             if (err := stderr.read().decode()):
                 print(f"[red]Errors:[/red]\n{err}")
+            
             
             # # Run fMRIprep command
             # command = f'cd fMRIprep; sudo ./fmri-run.sh {"--anat-only" if anat_only else ""}; echo "fMRIprep ran successfully!"'
@@ -82,10 +85,15 @@ def main(user, host, password, subjects=None, tasks=None, anat_only=False):
                     f.write('\n'.join(subjects) + '\n')
             
             cmd_prep_ids = (
-                f"IDS=$(tr '\n' ' ' < {remote_file}) && "
+                f'IDS="$(tr "\\n" " " < {remote_file})" && '
                 f"cd {remote_dir} && "
-                f"sudo ./fmri-run.sh --participant-label $IDS {tasks_flag} "
-                f"{'--anat-only' if anat_only else ''} && "
+                f"sudo fmriprep-docker /home/fibrostudy/fMRIprep/selectedSubs "
+                f"/media/psylab-6028/DATA/fMRIprep_outputs participant "
+                f"--participant-label $IDS {tasks_flag} "
+                f"{'--anat-only' if anat_only else ''} "
+                f"--fs-license-file /home/fibrostudy/fMRIprep/license.txt "
+                f"-w /media/Data/work/ --low-mem --nthreads 8 "
+                f"--ignore slicetiming --skip_bids_validation && "
                 f"echo '[fMRIprep finished OK]'"
             )
 

@@ -287,10 +287,10 @@ def main():
     if 'anat_only' not in st.session_state:
         st.session_state.anat_only = False
 
-    anat_only = st.checkbox('Anatomical only', value=st.session_state.anat_only)
-    st.session_state.anat_only = anat_only
     
-    if anat_only:
+    st.session_state.anat_only = st.checkbox('Anatomical only', value=st.session_state.anat_only)
+
+    if st.session_state.anat_only:
         st.write('Anatomical only selected')
     else:
         st.write('Anatomical and functional data will be processed')
@@ -325,21 +325,40 @@ def main():
         # stdin.close()
         # stdout.close()
         # stderr.close()
-        
-        helper   = r"C:\Users\PsyLab-6028\Desktop\fMRIprepStreamlit\scripts\run_fMRIprep.py"
-        subject_flags = " ".join(st.session_state.subjects_to_run) if st.session_state.subjects_to_run else ""
-        task_flags    = " ".join(selected_tasks) if selected_tasks else ""
-        anat_only = '1' if st.session_state.anat_only else '0'
+        helper = r"C:\Users\PsyLab-6028\Desktop\fMRIprepStreamlit\scripts\run_fMRIprep.py"
 
-        command = rf'python "{helper}" {host} {user} {password} ' \
-            rf'--subjects {subject_flags} --tasks {task_flags} --anat-only {anat_only}'
+        subjects = st.session_state.subjects_to_run or []
+        tasks    = selected_tasks or []
+        anat     = st.session_state.anat_only
 
-        command = rf'python "C:\Users\PsyLab-6028\Desktop\fMRIprepStreamlit\scripts\run_fMRIprep.py" {host} {user} {password} {" ".join(selected_tasks)}'
-        # else:
-        #     command = rf'python "C:\Users\PsyLab-6028\Desktop\fMRIprepStreamlit\scripts\run_fMRIprep.py" {host} {user} {password}'
+        parts = [rf'python "{helper}"', host, user, password]
+
+        if subjects:
+            parts += ["--subjects"] + subjects
+        if tasks:
+            parts += ["--tasks"] + tasks
+        if anat:
+            parts += ["--anat-only"]  # bare flag, no 1/0
+
+        command = " ".join(parts)
+
+        process = subprocess.Popen(
+            command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        # helper   = r"C:\Users\PsyLab-6028\Desktop\fMRIprepStreamlit\scripts\run_fMRIprep.py"
+        # subject_flags = " ".join(st.session_state.subjects_to_run) if st.session_state.subjects_to_run else ""
+        # task_flags    = " ".join(selected_tasks) if selected_tasks else ""
+        # anat_only = '1' if st.session_state.anat_only else '0'
+
+        # command = rf'python "{helper}" {host} {user} {password} ' \
+        #     rf'--subjects {subject_flags} --tasks {task_flags} --anat-only {anat_only}'
+
+        # command = rf'python "C:\Users\PsyLab-6028\Desktop\fMRIprepStreamlit\scripts\run_fMRIprep.py" {host} {user} {password} {" ".join(selected_tasks)}'
+        # # else:
+        # #     command = rf'python "C:\Users\PsyLab-6028\Desktop\fMRIprepStreamlit\scripts\run_fMRIprep.py" {host} {user} {password}'
         
-        # subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # # subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
         print(process.stdout.read().decode())
         print(process.stderr.read().decode())
