@@ -41,22 +41,42 @@ def main(user, host, password, subjects=None, tasks=None, anat_only=False):
         client.connect(host, username=user, password=password)
 
         remote_dir = "fMRIprep"
-        tasks_flag = " ".join(f"--task-id {t}" for t in tasks)
+        tasks_flag = " ".join(f"-t {t}" for t in tasks)
 
         if not subjects:
-
             cmd = (
                 f"cd {remote_dir} && "
-                f"sudo ./fmri-run.sh {tasks_flag} {'--anat-only' if anat_only else ''} && "
+                f"sudo fmriprep-docker /home/fibrostudy/fMRIprep/selectedSubs /media/psylab-6028/DATA/fMRIprep_outputs participant {tasks_flag} {'--anat-only' if anat_only else ''} --fs-license-file /home/fibrostudy/fMRIprep/license.txt -w /media/Data/work/ --low-mem --nthreads 8 --ignore slicetiming --skip_bids_validation &&"
                 f"echo '[fMRIprep finished OK]'"
             )
 
             print(f"[cyan]Executing command: {cmd}[/cyan]")
             stdin, stdout, stderr = client.exec_command(cmd, get_pty=True)
 
+            # Provide password for sudo
+            stdin.write(password + "\n")
+            stdin.flush()
+
+            # Collect output
+            print("[green]Output:[/green]")
             print(stdout.read().decode())
+            
+            # Check for errors
             if (err := stderr.read().decode()):
                 print(f"[red]Errors:[/red]\n{err}")
+            
+            # cmd = (
+            #     f"cd {remote_dir} && "
+            #     f"sudo ./fmri-run.sh {tasks_flag} {'--anat-only' if anat_only else ''} && "
+            #     f"echo '[fMRIprep finished OK]'"
+            # )
+
+            # print(f"[cyan]Executing command: {cmd}[/cyan]")
+            # stdin, stdout, stderr = client.exec_command(cmd, get_pty=True)
+
+            # print(stdout.read().decode())
+            # if (err := stderr.read().decode()):
+            #     print(f"[red]Errors:[/red]\n{err}")
             
             # # Run fMRIprep command
             # command = f'cd fMRIprep; sudo ./fmri-run.sh {"--anat-only" if anat_only else ""}; echo "fMRIprep ran successfully!"'
@@ -84,10 +104,18 @@ def main(user, host, password, subjects=None, tasks=None, anat_only=False):
             cmd_prep_ids = (
                 f"IDS=$(tr '\n' ' ' < {remote_file}) && "
                 f"cd {remote_dir} && "
-                f"sudo ./fmri-run.sh --participant-label $IDS {tasks_flag} "
-                f"{'--anat-only' if anat_only else ''} && "
+                f"sudo fmriprep-docker /home/fibrostudy/fMRIprep/selectedSubs /media/psylab-6028/DATA/fMRIprep_outputs participant $IDS {tasks_flag} "
+                f"{'--anat-only' if anat_only else ''} --fs-license-file /home/fibrostudy/fMRIprep/license.txt -w /media/Data/work/ --low-mem --nthreads 8 --ignore slicetiming --skip_bids_validation && "
                 f"echo '[fMRIprep finished OK]'"
             )
+
+            # cmd_prep_ids = (
+            #     f"IDS=$(tr '\n' ' ' < {remote_file}) && "
+            #     f"cd {remote_dir} && "
+            #     f"sudo ./fmri-run.sh --participant-label $IDS {tasks_flag} "
+            #     f"{'--anat-only' if anat_only else ''} && "
+            #     f"echo '[fMRIprep finished OK]'"
+            # )
 
             print(f"[cyan]Executing command: \n{cmd_prep_ids}[/cyan]")
             stdin, stdout, stderr = client.exec_command(cmd_prep_ids, get_pty=True)
