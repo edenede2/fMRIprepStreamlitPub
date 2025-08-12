@@ -48,6 +48,7 @@ def main(user, host, password, subjects=None, tasks=None, anat_only=False):
                 f"echo '[fMRIprep finished OK]'"
             )
 
+            stdin, stdout, stderr = client.exec_command(cmd, get_pty=True)
 
             # Provide password for sudo
             stdin.write(password + "\n")
