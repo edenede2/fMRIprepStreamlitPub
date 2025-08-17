@@ -39,11 +39,11 @@ def main(user, host, password, subjects=None, tasks=None, anat_only=False):
 
             cmd = (
                 f"cd {remote_dir} && "
-                f"sudo fmriprep-docker /home/fibrostudy/fMRIprep/selectedSubs "
+                f"sudo fmriprep-docker media/psylab-6028/DATA/fMRIprep/selectedSubs "
                 f"/media/psylab-6028/DATA/fMRIprep_outputs participant "
                 f"{tasks_flag} {'--anat-only' if anat_only else ''} "
-                f"--fs-license-file /home/fibrostudy/fMRIprep/license.txt "
-                f"-w /media/Data/work/ --low-mem --nthreads 8 "
+                f"--fs-license-file media/psylab-6028/DATA/fMRIprep/license.txt "
+                f"-w media/psylab-6028/DATA/work/ --low-mem --nthreads 8 "
                 f"--ignore slicetiming --skip_bids_validation && "
                 f"echo '[fMRIprep finished OK]'"
             )
@@ -88,12 +88,12 @@ def main(user, host, password, subjects=None, tasks=None, anat_only=False):
             cmd_prep_ids = (
                 f'IDS="$(tr "\\n" " " < {remote_file})" && '
                 f"cd {remote_dir} && "
-                f"sudo fmriprep-docker /home/fibrostudy/fMRIprep/selectedSubs "
+                f"sudo fmriprep-docker media/psylab-6028/DATA/fMRIprep/fibro/selectedSubs "
                 f"/media/psylab-6028/DATA/fMRIprep_outputs participant "
                 f"--participant-label $IDS {tasks_flag} "
                 f"{'--anat-only' if anat_only else ''} "
-                f"--fs-license-file /home/fibrostudy/fMRIprep/license.txt "
-                f"-w /media/Data/work/ --low-mem --nthreads 8 "
+                f"--fs-license-file media/psylab-6028/DATA/fMRIprep/license.txt "
+                f"-w media/psylab-6028/DATA/work/ --low-mem --nthreads 8 "
                 f"--ignore slicetiming --skip_bids_validation && "
                 f"echo '[fMRIprep finished OK]'"
             )

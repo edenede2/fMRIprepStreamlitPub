@@ -9,9 +9,11 @@ from flask import Flask
 from dotenv import load_dotenv
 import stat
 from datetime import datetime
+import posixpath
 
 import subprocess
 
+st.set_page_config(page_title='fMRIprep management', page_icon=':brain:', layout='wide')
 
 load_dotenv()  
 
@@ -20,7 +22,18 @@ host = os.getenv('HOST')
 user = os.getenv('USER')
 password = os.getenv('PASSWORD')
 
-
+def _ensure_remote_dir(sftp, remote_dir: str):
+    remote_dir = remote_dir.replace("\\", "/").rstrip("/")
+    if not remote_dir:
+        return
+    parts = [p for p in remote_dir.split("/") if p]
+    path = "/" if remote_dir.startswith("/") else ""
+    for p in parts:
+        path = posixpath.join(path, p) if path else p
+        try:
+            sftp.stat(path)
+        except IOError:
+            sftp.mkdir(path)
 
 def main():
     host = os.getenv('HOST')
@@ -54,7 +67,15 @@ def main():
         # Ensure the local directory exists
         if not os.path.exists(local_path):
             os.makedirs(local_path)
-
+        if not is_remote_dir(sftp, remote_path):
+            if 'html' in remote_path:
+                try:
+                    sftp.get(remote_path, local_path)
+                    return
+                except Exception as e:
+                    print(f"No html file found at {remote_path}: {e}")
+                    st.warning(f"No html file found at {remote_path}: {e}")
+                    return
         # List all items in the remote directory
         for item in sftp.listdir(remote_path):
             remote_item_path = f"{remote_path}/{item}"
@@ -90,7 +111,18 @@ def main():
             return False
                     
                     
-                    
+    def _ensure_remote_dir(sftp, remote_dir: str):
+        remote_dir = remote_dir.replace("\\", "/").rstrip("/")
+        if not remote_dir:
+            return
+        parts = [p for p in remote_dir.split("/") if p]
+        path = "/" if remote_dir.startswith("/") else ""
+        for p in parts:
+            path = posixpath.join(path, p) if path else p
+            try:
+                sftp.stat(path)
+            except IOError:
+                sftp.mkdir(path)
 
         
     def remove_remote_directory(sftp, remote_path):
@@ -106,6 +138,14 @@ def main():
     def upload_directory(sftp, local_path, remote_path):
         """Recursively upload a directory with all its files and subdirectories."""
         # Ensure the remote directory does not exist
+        local_dir = os.path.abspath(local_path)
+        remote_dir = remote_path.replace("\\", "/").rstrip("/")
+        
+        if not os.path.isdir(local_dir):
+            st.warning(f"Local path '{local_dir}' is not a directory.")
+            return
+        
+        _ensure_remote_dir(sftp, remote_dir)
         try:
             sftp.stat(remote_path)
             remove_remote_directory(sftp, remote_path)
@@ -116,12 +156,22 @@ def main():
         sftp.mkdir(remote_path)
 
         for item in os.listdir(local_path):
-            local_item_path = os.path.join(local_path, item)
-            remote_item_path = f"{remote_path}/{item}".replace("\\", "//")  # Ensure proper path format for remote
+            local_item_path = os.path.join(local_dir, item)
+            remote_item_path = posixpath.join(remote_dir, item)  
+            
+            # remote_item_path = f"{remote_path}/{item}".replace("\\", "//")  # Ensure proper path format for remote
 
             if os.path.isdir(local_item_path):
                 # Recursively upload subdirectories
+                _ensure_remote_dir(sftp, remote_item_path)
                 upload_directory(sftp, local_item_path, remote_item_path)
+            elif os.path.isfile(local_item_path):
+                _ensure_remote_dir(sftp, posixpath.dirname(remote_item_path))
+                try:
+                    sftp.put(local_item_path, remote_item_path)
+                except IOError as e:
+                    st.error(f"Failed to upload {local_item_path} to {remote_item_path}: {e}")
+                    
             else:
                 # Upload individual file
                 sftp.put(local_item_path, remote_item_path)
@@ -138,11 +188,35 @@ def main():
     st.write('Convert nifti to BIDS format')
     
     if st.button('Convert to BIDS'):
-        command = rf'python "C:\Users\PsyLab-6028\Desktop\fMRIprepStreamlit\A stand alone.py" '
-        subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        command = rf'python "C:\Users\PsyLab-6028\Documents\GitHub\fMRIprepStreamlitPub\A stand alone .py" '
+        # subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         
-        print('Conversion to BIDS format finished')
+        # print('Conversion to BIDS format finished')
+        with st.status('Converting to BIDS...', expanded=True) as status:
+            log_placeholder = st.empty()
+            log = ""
+            process = subprocess.Popen(
+                command,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+                encoding='utf-8',
+                errors='replace'
+            )
+            for line in iter(process.stdout.readline, ''):
+                if not line:
+                    break
+                log += line
+                log_placeholder.code(log)
+            process.stdout.close()
+            ret = process.wait()
+            if ret == 0:
+                status.update(label='Conversion finished', state='complete')
+            else:
+                status.update(label=f'Conversion failed (exit {ret})', state='error')
 
     st.write('This is a simple Streamlit app to manage fMRIprep on the server')
 
@@ -162,14 +236,16 @@ def main():
 
         client.set_missing_host_key_policy(AutoAddPolicy())
         print(f'Connecting to {host} as {user}')
-        client.connect(host, username=user, password=password)
+        client.connect(host, username=user_admin, password=password_admin)
 
 
 
         sftp_session = client.open_sftp()
         client.set_log_channel('DEBUG')
         print(f'Current directory: {sftp_session.getcwd()}')
-        sftp_session.chdir('fMRIprep/selectedSubs/')
+        sftp_session.chdir('..')
+        sftp_session.chdir('..')
+        sftp_session.chdir('media/psylab-6028/DATA/fMRIprep/fibro/selectedSubs/')
         # print(f'Current directory: {sftp_session.getcwd()}')  
         print(f'List of files: {sftp_session.listdir()}')
         
@@ -206,12 +282,14 @@ def main():
         
         client.set_missing_host_key_policy(AutoAddPolicy())
         
-        client.connect(host, username=user, password=password)
+        client.connect(host, username=user_admin, password=password_admin)
         
         sftp_session = client.open_sftp()
         client.set_log_channel('DEBUG')
         
-        sftp_session.chdir('fMRIprep/selectedSubs/')
+        sftp_session.chdir('..')
+        sftp_session.chdir('..')
+        sftp_session.chdir('media/psylab-6028/DATA/fMRIprep/fibro/selectedSubs/')
         
         sub_folders = [os.path.join(folder_path, f) for f in list_subjects if f.startswith('sub-')]
         remote_sub_folders = [f for f in list_subjects if f.startswith('sub-')]
@@ -236,14 +314,15 @@ def main():
 
         client.set_missing_host_key_policy(AutoAddPolicy())
 
-        client.connect(host, username=user, password=password)
+        client.connect(host, username=user_admin, password=password_admin)
 
 
 
         sftp_session = client.open_sftp()
         client.set_log_channel('DEBUG')
-        
-        sftp_session.chdir('fMRIprep/selectedSubs/')
+        sftp_session.chdir('..')
+        sftp_session.chdir('..')
+        sftp_session.chdir('media/psylab-6028/DATA/fMRIprep/fibro/selectedSubs/')
         
         sub_folder = os.path.join(folder_path, selected_subject)
         remote_sub_folder = f'{selected_subject}'
@@ -309,9 +388,11 @@ def main():
         client.load_host_keys(known_hosts_path)
         client.load_system_host_keys()
         client.set_missing_host_key_policy(AutoAddPolicy())
-        client.connect(host, username=user, password=password)
+        client.connect(host, username=user_admin, password=password_admin)
         sftp_session = client.open_sftp()
-        sftp_session.chdir('fMRIprep/selectedSubs/')
+        sftp_session.chdir('..')
+        sftp_session.chdir('..')
+        sftp_session.chdir('media/psylab-6028/DATA/fMRIprep/fibro/selectedSubs/')
         st.session_state.list_of_transfered = [f for f in sftp_session.listdir() if f.startswith('sub-')]
         print(f'List of files: {st.session_state.list_of_transfered}')
         client.close()
@@ -352,7 +433,7 @@ def main():
         tasks    = selected_tasks or []
         anat     = st.session_state.anat_only
 
-        parts = [rf'python "{helper}"', host, user, password]
+        parts = [rf'python "{helper}"', host, user_admin, password_admin]
 
         if subjects:
             parts += ["--subjects"] + subjects
@@ -395,6 +476,12 @@ def main():
     if 'list_files_outputs_names' not in st.session_state:
         st.session_state.list_files_outputs_names = []
         
+    if 'list_files_outputs_old' not in st.session_state:
+        st.session_state.list_files_outputs_old = []
+        
+    if 'list_files_outputs_names_old' not in st.session_state:
+        st.session_state.list_files_outputs_names_old = []
+        
     # if st.button('Check output folder'):
     #     try:
     #         client = SSHClient()
@@ -414,19 +501,35 @@ def main():
     #         print(f'Error: {e}')
     if st.button('Check output folder'):
         try:
-            client = SSHClient()
+            # client = SSHClient()
             known_hosts_path = os.path.expanduser('~/.ssh/known_hosts')
+            # client.load_host_keys(known_hosts_path)
+            # client.load_system_host_keys()
+            # client.set_missing_host_key_policy(AutoAddPolicy())
+            # client.connect(host, username=user_admin, password=password_admin)
+            # sftp_session = client.open_sftp()
+            # sftp_session.chdir('fMRIprep/outputs/')
+            # attrs_old = sorted(sftp_session.listdir_attr(), key=lambda a: a.st_mtime, reverse=True)
+            # print(f'List of files: {sftp_session.listdir()}')
+            # st.session_state.list_files_outputs_old = [
+            #     f"{attr.filename} | size: {attr.st_size} | modified datetime: {datetime.fromtimestamp(attr.st_mtime).strftime('%Y-%m-%d %H:%M:%S')}"
+            #     for attr in attrs_old
+            # ]
+            # st.session_state.list_files_outputs_names_old = [attr.filename for attr in attrs_old]
+            # client.close()
+            # sftp_session.close()
+            client = SSHClient()
             client.load_host_keys(known_hosts_path)
             client.load_system_host_keys()
             client.set_missing_host_key_policy(AutoAddPolicy())
             client.connect(host, username=user_admin, password=password_admin)
             sftp_session = client.open_sftp()
-            # sftp_session.chdir('fMRIprep/outputs/')
             sftp_session.chdir('..')  # Navigate to the parent directory
             sftp_session.chdir('..')  # Navigate to the parent directory again
             sftp_session.chdir('media/psylab-6028/DATA/fMRIprep_outputs/')
             # sftp_session.chdir('media/psylab-6028/DATA/fMRIprep_outputs/')
             attrs = sorted(sftp_session.listdir_attr(), key=lambda a: a.st_mtime, reverse=True)
+            print(f'List of files: {sftp_session.listdir()}')
             st.session_state.list_files_outputs = [
                 f"{attr.filename} | size: {attr.st_size} | modified datetime: {datetime.fromtimestamp(attr.st_mtime).strftime('%Y-%m-%d %H:%M:%S')}"
                 for attr in attrs
@@ -439,6 +542,10 @@ def main():
             print(f'Error: {e}')
             
     st.divider()
+
+    st.write('Select the output folder to use')
+    
+    
 
     st.write('To download the output folder, select the desired folder')
 
@@ -453,9 +560,11 @@ def main():
         client.load_host_keys(known_hosts_path)
         client.load_system_host_keys()
         client.set_missing_host_key_policy(AutoAddPolicy())
-        client.connect(host, username=user, password=password)
+        client.connect(host, username=user_admin, password=password_admin)
         sftp_session = client.open_sftp()
-        sftp_session.chdir('fMRIprep/outputs/')
+        sftp_session.chdir('..')  # Navigate to the parent directory
+        sftp_session.chdir('..')  # Navigate to the parent directory again
+        sftp_session.chdir('/media/psylab-6028/DATA/fMRIprep_outputs')
         list_files = sftp_session.listdir()
         selected_output_folder = [x.split(' ')[0] for x in st.session_state.list_files_outputs if x.startswith(selected_output_folder)][0]
         if selected_output_folder.startswith('sub-'):
@@ -468,9 +577,11 @@ def main():
             download_directory(sftp_session, f'{selected_output_folder}/figures', f'E:/Fibro/fMRIprep_output/{selected_output_folder}/figures')
             download_directory(sftp_session, f'{selected_output_folder}/func', f'E:/Fibro/fMRIprep_output/{selected_output_folder}/func')
             download_directory(sftp_session, f'{selected_output_folder}/log', f'E:/Fibro/fMRIprep_output/{selected_output_folder}/log')
-            # sftp_session.get(f'fMRIprep/outputs/{selected_output_folder}/figures', f'PSYLAB-6028-016/E:/Fibro/fMRIprep_output/{selected_output_folder}/figures')
-            # sftp_session.get(f'fMRIprep/outputs/{selected_output_folder}/func', f'PSYLAB-6028-016/E:/Fibro/fMRIprep_output/{selected_output_folder}/func')
-            sftp_session.get(f'{selected_output_folder}.html', f'E:/Fibro/fMRIprep_output/{selected_output_folder}.html')
+            # sftp_session.get(f'fMRIprep/outputs/{selected_output_folder}/figures', f'E:/Fibro/fMRIprep_output/{selected_output_folder}/figures')
+            # sftp_session.get(f'fMRIprep/outputs/{selected_output_folder}/func', f'E:/Fibro/fMRIprep_output/{selected_output_folder}/func')
+            download_directory(sftp_session, f'{selected_output_folder}/anat', f'E:/Fibro/fMRIprep_output/{selected_output_folder}/anat')
+            download_directory(sftp_session, f'{selected_output_folder}.html', f'E:/Fibro/fMRIprep_output/{selected_output_folder}.html')
+            # sftp_session.get(f'{selected_output_folder}.html', f'E:/Fibro/fMRIprep_output/{selected_output_folder}.html')
         elif selected_output_folder.endswith('.json'):
             sftp_session.get(selected_output_folder, f'E:/Fibro/fMRIprep_output/{selected_output_folder}')
 
