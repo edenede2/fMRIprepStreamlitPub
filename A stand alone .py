@@ -101,6 +101,7 @@ def main():
     subjects_folders_dict = {}
     
     for dir in os.listdir(folder_path):
+        dir = dir.lower()
         if re.search(r'.sub_\d{3}', dir):
             subjects_folders_dict[f"{dir.split('.')[2]}"] = dir
         else:
@@ -123,7 +124,7 @@ def main():
         
         for sub, dir in subjects_folders_dict.items():
             progress.console.log(f"[cyan]Processing {sub}[/cyan]")
-
+            sub = sub.lower()
             try:
                 if re.search(r'sub-\d{3}', sub):
                     old_sub = sub.replace('sub-', 'sub_')

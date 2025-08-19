@@ -32,18 +32,21 @@ def main(user, host, password, subjects=None, tasks=None, anat_only=False):
         print(f"Connecting to {host} as {user}...")
         client.connect(host, username=user, password=password)
 
-        remote_dir = "fMRIprep"
+        # Use absolute paths on the remote host
+        remote_dir  = "/media/psylab-6028/DATA/fMRIprep/fibro"
+        bids_dir    = "/media/psylab-6028/DATA/fMRIprep/fibro/selectedSubs"
+        out_dir     = "/media/psylab-6028/DATA/fMRIprep_outputs"
+        work_dir    = "/media/psylab-6028/DATA/fMRIprep/work"
+        license_file = f"{remote_dir}/license.txt"
+
         tasks_flag = " ".join(f"-t {t}" for t in (tasks or []))
 
         if not subjects:
-
             cmd = (
-                f"cd {remote_dir} && "
-                f"sudo fmriprep-docker media/psylab-6028/DATA/fMRIprep/selectedSubs "
-                f"/media/psylab-6028/DATA/fMRIprep_outputs participant "
+                f"sudo fmriprep-docker -v /media/psylab-6028/DATA/tmp_fmriprep:/tmp {bids_dir} {out_dir} participant "
                 f"{tasks_flag} {'--anat-only' if anat_only else ''} "
-                f"--fs-license-file media/psylab-6028/DATA/fMRIprep/license.txt "
-                f"-w media/psylab-6028/DATA/work/ --low-mem --nthreads 8 "
+                f"--fs-license-file {license_file} "
+                f"-w {work_dir} --low-mem --nthreads 8 "
                 f"--ignore slicetiming --skip_bids_validation && "
                 f"echo '[fMRIprep finished OK]'"
             )
@@ -87,13 +90,11 @@ def main(user, host, password, subjects=None, tasks=None, anat_only=False):
             
             cmd_prep_ids = (
                 f'IDS="$(tr "\\n" " " < {remote_file})" && '
-                f"cd {remote_dir} && "
-                f"sudo fmriprep-docker media/psylab-6028/DATA/fMRIprep/fibro/selectedSubs "
-                f"/media/psylab-6028/DATA/fMRIprep_outputs participant "
+                f"sudo fmriprep-docker -v /media/psylab-6028/DATA/tmp_fmriprep:/tmp {bids_dir} {out_dir} participant "
                 f"--participant-label $IDS {tasks_flag} "
                 f"{'--anat-only' if anat_only else ''} "
-                f"--fs-license-file media/psylab-6028/DATA/fMRIprep/license.txt "
-                f"-w media/psylab-6028/DATA/work/ --low-mem --nthreads 8 "
+                f"--fs-license-file {license_file} "
+                f"-w {work_dir} --low-mem --nthreads 8 "
                 f"--ignore slicetiming --skip_bids_validation && "
                 f"echo '[fMRIprep finished OK]'"
             )
